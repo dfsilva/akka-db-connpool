@@ -13,7 +13,7 @@ How to add it to your sbt project.
 add dependency to build.sbt
 
 ```scala
-"org.guangwenz" %% "akka-db-connpool" % "1.0.0-SNAPSHOT",
+"org.guangwenz" %% "akka-db-connpool" % "1.0.1",
 ```
 
 then add following to the application.conf
