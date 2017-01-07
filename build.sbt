@@ -1,7 +1,7 @@
 
 name := "akka-db-connpool"
 organization := "org.guangwenz"
-version := "1.0.0"
+version := "1.0.1"
 
 scalaVersion := "2.11.8"
 

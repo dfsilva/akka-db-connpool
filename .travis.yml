@@ -1,6 +1,6 @@
 language: scala
 jdk: oraclejdk8
-script: sbt clean publish
+script: sbt clean compile
 scala:
 - 2.11.8
 env:
