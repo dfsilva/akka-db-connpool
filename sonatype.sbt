@@ -4,6 +4,9 @@ credentials ++= (for {
 } yield Seq(Credentials("Sonatype Nexus Repository Manager","oss.sonatype.org",username,password))).getOrElse(Seq())
 
 sonatypeProfileName := "org.guangwenz"
+
+pgpPassphrase := Some(System.getenv().get("PGP_PASSPHRASE").toCharArray)
+
 pomExtra in Global := {
   <url>https://github.com/zgwmike/akka-db-connpool</url>
     <licenses>
