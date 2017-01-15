@@ -3,9 +3,9 @@ name := "akka-db-connpool"
 organization := "org.guangwenz"
 version := "1.0.1"
 
-scalaVersion := "2.11.8"
+scalaVersion := "2.12.1"
 
-val akkaVersion = "2.4.11"
+val akkaVersion = "2.4.16"
 
 libraryDependencies ++= {
   Seq(
