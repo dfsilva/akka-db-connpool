@@ -39,14 +39,14 @@ class DbConnectionPoolExtension(system: ExtendedActorSystem) extends Extension {
     }
   }
 
-  def connect(handler: (Either[String, Connection]) => Unit): Unit = {
+  def connect(handler: (Either[Exception, Connection]) => Unit): Unit = {
     implicit val executor = system.dispatcher
     val future = connectionPool.ask(GetDbConnection(UUID.randomUUID().toString)).mapTo[DbConnectionRetrieved]
     try {
       handler(Right(Await.result(future, 30.seconds).conn))
     } catch {
       case exception: Exception =>
-        handler(Left(exception.getMessage))
+        handler(Left(exception))
     }
   }
 
