@@ -23,4 +23,12 @@ class DbConnectionPoolExtensionTest extends TestKit(ActorSystem("akkaconntest"))
       actor ! PrintDbStats("test")
     }
   }
+  it should "return connection" in {
+    DbConnectionPoolExtension(system).connect {
+      case Right(connection) =>
+        connection.isValid(20) shouldBe true
+      case Left(reason) =>
+        fail(reason)
+    }
+  }
 }

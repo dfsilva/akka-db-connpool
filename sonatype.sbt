@@ -5,8 +5,6 @@ credentials ++= (for {
 
 sonatypeProfileName := "org.guangwenz"
 
-pgpPassphrase := Some(System.getenv().get("PGP_PASSPHRASE").toCharArray)
-
 pomExtra in Global := {
   <url>https://github.com/zgwmike/akka-db-connpool</url>
     <licenses>

@@ -24,6 +24,7 @@ class DbConnectionPoolExtension(system: ExtendedActorSystem) extends Extension {
 
   private val connectionPool = system.actorOf(Props(new ConnectionPool()).withDispatcher("db-access-dispatcher"), "guangwenz-util-db")
   private implicit val timeout = Timeout(1.minutes)
+  private val requests = Map()
 
   system.registerOnTermination {
     connectionPool ! ShutdownConnectionPool
@@ -35,6 +36,17 @@ class DbConnectionPoolExtension(system: ExtendedActorSystem) extends Extension {
       Some(Await.result(future, 30.seconds).conn)
     } catch {
       case ex: Exception => None
+    }
+  }
+
+  def connect(handler: (Either[String, Connection]) => Unit): Unit = {
+    implicit val executor = system.dispatcher
+    val future = connectionPool.ask(GetDbConnection(UUID.randomUUID().toString)).mapTo[DbConnectionRetrieved]
+    try {
+      handler(Right(Await.result(future, 30.seconds).conn))
+    } catch {
+      case exception: Exception =>
+        handler(Left(exception.getMessage))
     }
   }
 

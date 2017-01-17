@@ -29,16 +29,19 @@ class ConnectionPool(className: Option[String] = None, url: Option[String] = Non
 
   import ConnectionPool._
 
-  var connectionPool: Option[BoneCP] = None
+  var connectionPool: Either[String, BoneCP] = Left("Not initialized yet")
 
   override def postStop(): Unit = {
     super.postStop()
+
     connectionPool match {
-      case Some(cp) =>
+      case Left(excep) =>
+        log.warning("connection Pool is not created, last reason is {}", excep)
+        connectionPool = Left("Not initialized")
+      case Right(boneCP) =>
         log.info("Shutting down BoneCP pool")
-        cp.shutdown()
-        connectionPool = None
-      case None =>
+        boneCP.shutdown()
+        connectionPool = Left("Not initialized")
     }
   }
 
@@ -54,52 +57,53 @@ class ConnectionPool(className: Option[String] = None, url: Option[String] = Non
       config.setMinConnectionsPerPartition(context.system.settings.config.getInt("guangwenz.akka.db.jdbc.min-connections-per-partition"))
       config.setMaxConnectionsPerPartition(context.system.settings.config.getInt("guangwenz.akka.db.jdbc.max-connections-per-partition"))
       config.setPartitionCount(context.system.settings.config.getInt("guangwenz.akka.db.jdbc.partition-count"))
-      connectionPool = Some(new BoneCP(config))
+      connectionPool = Right(new BoneCP(config))
     } catch {
       case ex: Exception =>
-        log.error(ex.getLocalizedMessage, ex)
+        log.error("ERROR to initialize boneCP with error {}", ex.getMessage, ex)
+
     }
   }
 
-  def receive = {
+  def receive: PartialFunction[Any, Unit] = {
     case GetDbConnection(reqId) =>
       connectionPool match {
-        case Some(cp) =>
-          log.info("Connection pool is ready, sending back connection.")
-          sender ! DbConnectionRetrieved(reqId, cp.getConnection)
-        case None =>
-          log.warning("No connection pool created")
-          sender ! GetDbConnectionException(reqId, "Connection pool is not ready")
+        case Right(boneCP) =>
+          sender ! DbConnectionRetrieved(reqId, boneCP.getConnection)
+        case Left(reason) =>
+          sender ! GetDbConnectionException(reqId, reason)
       }
+
     case PrintDbStats(reqId) =>
       connectionPool match {
-        case Some(cp) =>
-          log.info(s"CacheHitRatio:${cp.getStatistics.getCacheHitRatio}")
-          log.info(s"CacheHits:${cp.getStatistics.getCacheHits}")
-          log.info(s"CacheMiss:${cp.getStatistics.getCacheMiss}")
-          log.info(s"ConnectionsRequested:${cp.getStatistics.getConnectionsRequested}")
-          log.info(s"ConnectionWaitTimeAvg:${cp.getStatistics.getConnectionWaitTimeAvg}")
-          log.info(s"CumulativeConnectionWaitTime:${cp.getStatistics.getCumulativeConnectionWaitTime}")
-          log.info(s"CumulativeStatementExecutionTime:${cp.getStatistics.getCumulativeStatementExecutionTime}")
-          log.info(s"StatementExecuteTimeAvg:${cp.getStatistics.getStatementExecuteTimeAvg}")
-          log.info(s"StatementPrepareTimeAvg:${cp.getStatistics.getStatementPrepareTimeAvg}")
-          log.info(s"StatementsCached:${cp.getStatistics.getStatementsCached}")
-          log.info(s"StatementsExecuted:${cp.getStatistics.getStatementsExecuted}")
-          log.info(s"StatementsPrepared:${cp.getStatistics.getStatementsPrepared}")
-          log.info(s"TotalCreatedConnections:${cp.getStatistics.getTotalCreatedConnections}")
-          log.info(s"TotalFree:${cp.getStatistics.getTotalFree}")
-          log.info(s"TotalLeased:${cp.getStatistics.getTotalLeased}")
+        case Right(boneCP) =>
+          log.info(s"CacheHitRatio:${boneCP.getStatistics.getCacheHitRatio}")
+          log.info(s"CacheHits:${boneCP.getStatistics.getCacheHits}")
+          log.info(s"CacheMiss:${boneCP.getStatistics.getCacheMiss}")
+          log.info(s"ConnectionsRequested:${boneCP.getStatistics.getConnectionsRequested}")
+          log.info(s"ConnectionWaitTimeAvg:${boneCP.getStatistics.getConnectionWaitTimeAvg}")
+          log.info(s"CumulativeConnectionWaitTime:${boneCP.getStatistics.getCumulativeConnectionWaitTime}")
+          log.info(s"CumulativeStatementExecutionTime:${boneCP.getStatistics.getCumulativeStatementExecutionTime}")
+          log.info(s"StatementExecuteTimeAvg:${boneCP.getStatistics.getStatementExecuteTimeAvg}")
+          log.info(s"StatementPrepareTimeAvg:${boneCP.getStatistics.getStatementPrepareTimeAvg}")
+          log.info(s"StatementsCached:${boneCP.getStatistics.getStatementsCached}")
+          log.info(s"StatementsExecuted:${boneCP.getStatistics.getStatementsExecuted}")
+          log.info(s"StatementsPrepared:${boneCP.getStatistics.getStatementsPrepared}")
+          log.info(s"TotalCreatedConnections:${boneCP.getStatistics.getTotalCreatedConnections}")
+          log.info(s"TotalFree:${boneCP.getStatistics.getTotalFree}")
+          log.info(s"TotalLeased:${boneCP.getStatistics.getTotalLeased}")
           sender ! "Done"
-        case None =>
+        case Left(reason) =>
           log.warning("No connection pool created")
-          sender ! "Fail"
+          sender ! reason
       }
     case ShutdownConnectionPool =>
       connectionPool match {
-        case Some(pool) =>
+        case Right(boneCP) =>
           log.info("Shutting down connection pool")
-          pool.shutdown()
-        case None=>          
+          boneCP.shutdown()
+        case Left(reason) =>
+          log.info("connection pool is not created, last error {}", reason)
       }
   }
 }

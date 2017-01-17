@@ -6,8 +6,8 @@ jdk:
 
 script:
 - sbt clean compile
-- sbt publishSigned
-- sbt sonatypeRelease
+#- sbt publishSigned
+#- sbt sonatypeRelease
 scala:
 - 2.11.7
 - 2.12.1
